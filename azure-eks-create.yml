@@ -1,0 +1,36 @@
+# Starter pipeline
+trigger:
+- main
+
+pool: 
+  vmImage: ubuntu-latest
+jobs:
+- job: createEksCluster
+  displayName: Create EKS Cluster
+  pool: 
+    vmImage: ubuntu-latest
+  steps:
+    - task: TerraformInstaller@0
+      inputs:
+        terraformVersion: 'latest'
+    - task: TerraformTaskV2@2
+      displayName: Terraform init
+      inputs:
+        provider: 'aws'
+        command: 'init'
+        commandOptions: '-backend=true -force-copy -get=true -input=false'
+        backendServiceAWS: 'amazon-console-azure'
+        backendAWSBucketName: 'devops-pin-terraform-files'
+        backendAWSKey: 'eks/terraform.tfstate'
+    - task: TerraformTaskV2@2
+      displayName: Terraform plan
+      inputs:
+        provider: 'aws'
+        command: 'plan'
+        environmentServiceNameAWS: 'amazon-console-azure'
+    - task: TerraformTaskV2@2
+      displayName: Terraform apply
+      inputs:
+        provider: 'aws'
+        command: 'apply'
+        environmentServiceNameAWS: 'amazon-console-azure'

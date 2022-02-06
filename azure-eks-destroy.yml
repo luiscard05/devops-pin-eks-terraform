@@ -1,0 +1,32 @@
+# Starter pipeline
+
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+jobs:
+- job: destroyEKS
+  displayName: Destroy eks cluster
+  pool:
+    vmImage: ubuntu-latest
+  steps:
+    - task: TerraformInstaller@0
+      inputs:
+        terraformVersion: 'latest'
+    - task: TerraformTaskV2@2
+      displayName: Terraform init
+      inputs:
+        provider: 'aws'
+        command: 'init'
+        commandOptions: '-backend=true -force-copy -get=true -input=false'
+        backendServiceAWS: 'amazon-console-azure'
+        backendAWSBucketName: 'devops-pin-terraform-files'
+        backendAWSKey: 'eks/terraform.tfstate'
+    - task: TerraformTaskV2@2
+      displayName: Terraform destroy
+      inputs:
+        provider: 'aws'
+        command: 'destroy'
+        environmentServiceNameAWS: 'amazon-console-azure'

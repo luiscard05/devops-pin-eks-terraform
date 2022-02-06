@@ -1,0 +1,62 @@
+pool: 
+   vmImage: ubuntu-latest
+
+jobs:
+- job: createEc2Resources
+  displayName: Create EKS resources
+  pool: 
+    vmImage: ubuntu-latest
+  steps:
+    - task: TerraformInstaller@0
+      inputs:
+        terraformVersion: 'latest'
+    - task: TerraformTaskV2@2
+      displayName: Terraform init
+      inputs:
+        provider: 'aws'
+        command: 'init'
+        backendServiceAWS: 'amazon-console-azure'
+        backendAWSBucketName: 'devops-pin-terraform-files'
+        backendAWSKey: 'ec2'
+    - task: TerraformTaskV2@2
+      displayName: Terraform validate
+      inputs:
+        provider: 'aws'
+        command: 'validate'
+    - task: TerraformTaskV2@2
+      displayName: Terraform plan
+      inputs:
+        provider: 'aws'
+        command: 'plan'
+        environmentServiceNameAWS: 'amazon-console-azure'
+    - task: TerraformTaskV2@2
+      displayName: Terraform apply
+      inputs:
+        provider: 'aws'
+        command: 'apply'
+        environmentServiceNameAWS: 'amazon-console-azure'
+- job: waitForValidation
+  displayName: Wait for external validation  
+  pool: server    
+  timeoutInMinutes: 4320 # job times out in 3 days
+  dependsOn: createEc2Resources
+  steps:   
+   - task: ManualValidation@0
+     timeoutInMinutes: 1440 # task times out in 1 day
+     inputs:
+         notifyUsers: |
+            erikavacacelaeb@gmail.com
+         instructions: 'Please validate the resources before to destroy'
+         onTimeout: 'resume'
+- job: destroyEc2Resources
+  displayName: Destroy ec2 resources
+  dependsOn: waitForValidation
+  pool: 
+    vmImage: ubuntu-latest
+  steps:
+    - task: TerraformTaskV2@2
+      displayName: Terraform destroy
+      inputs:
+        provider: 'aws'
+        command: 'destroy'
+        environmentServiceNameAWS: 'amazon-console-azure'
